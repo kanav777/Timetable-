@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0e0e0f">
+<title>Kanav · School</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0f;
+    --surface: #161618;
+    --border: #2a2a2e;
+    --accent: #c9a96e;
+    --accent2: #7c6aff;
+    --text: #e8e4dc;
+    --muted: #5a5a6a;
+    --done: #2a2a2e;
+    --done-text: #44444e;
+    --current: #1a1a10;
+    --current-border: #c9a96e;
+    --upcoming: #131318;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  header {
+    padding: 28px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+
+  .day-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .day-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.1;
+  }
+
+  .time-now {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    letter-spacing: 0.05em;
+  }
+
+  .no-school {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .no-school-icon { font-size: 48px; }
+  .no-school-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    color: var(--accent);
+  }
+  .no-school-sub { font-size: 12px; color: var(--muted); }
+
+  .timeline { padding: 12px 0 40px; }
+
+  .period-row {
+    display: flex;
+    align-items: stretch;
+    padding: 0 20px;
+    position: relative;
+    margin-bottom: 2px;
+  }
+
+  .time-col {
+    width: 58px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding-right: 14px;
+    padding-top: 14px;
+  }
+
+  .time-start {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.03em;
+    line-height: 1;
+  }
+
+  .line-col {
+    width: 2px;
+    flex-shrink: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    margin-top: 18px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  .line-col .vline {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    background: var(--border);
+  }
+
+  .card-col { flex: 1; padding: 8px 0 8px 14px; }
+
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: var(--surface);
+    transition: all 0.2s;
+  }
+
+  .row-done .dot { background: var(--done-text); }
+  .row-done .card {
+    background: var(--done);
+    border-color: var(--done);
+  }
+  .row-done .card-title { color: var(--done-text); }
+  .row-done .card-sub { color: var(--done-text); }
+  .row-done .period-tag { opacity: 0.3; }
+
+  .row-current .dot {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    width: 10px;
+    height: 10px;
+    margin-left: -1px;
+  }
+  .row-current .card {
+    background: var(--current);
+    border-color: var(--current-border);
+    border-left-width: 3px;
+  }
+  .row-current .card-title { color: var(--accent); }
+
+  .row-upcoming .card { background: var(--upcoming); }
+
+  .break-row {
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    margin-bottom: 2px;
+  }
+  .break-time-col { width: 58px; flex-shrink: 0; }
+  .break-line-col { width: 2px; flex-shrink: 0; position: relative; }
+  .break-line-col .vline { position: absolute; top:0; bottom:0; left:50%; transform:translateX(-50%); width:1px; background:var(--border); }
+  .break-content {
+    flex: 1;
+    padding: 6px 14px;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .period-tag {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+
+  .day-switcher {
+    display: flex;
+    gap: 4px;
+    margin-top: 14px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .day-switcher::-webkit-scrollbar { display: none; }
+
+  .day-pill {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .day-pill:hover { color: var(--text); }
+  .day-pill.today {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .day-pill.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+    font-weight: 700;
+  }
+  .reset-link {
+    font-size: 10px;
+    color: var(--accent2);
+    margin-top: 8px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    display: none;
+  }
+  .reset-link.show { display: inline-block; }
+
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .card-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 3px;
+    letter-spacing: 0.04em;
+  }
+
+  .now-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #000;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  .progress-bar {
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 1s linear;
+  }
+
+  .footer {
+    padding: 0 20px 20px;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    letter-spacing: 0.06em;
+  }
+
+  .diary-row .card {
+    background: #0f0f1a;
+    border-color: var(--accent2);
+    border-left: 3px solid var(--accent2);
+  }
+  .diary-row .card-title { color: var(--accent2); }
+  .diary-row .dot { background: var(--accent2); }
+
+  /* Edit mode */
+  .card { position: relative; }
+  .edit-icon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .edit-icon:hover, .edit-icon:active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-width: 500px;
+    padding: 20px;
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .modal-sub {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .input-group { margin-bottom: 14px; }
+  .input-label {
+    display: block;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .input-field {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+    font-weight: 700;
+  }
+  .btn-danger {
+    color: #ff6b6b;
+    border-color: rgba(255,107,107,0.3);
+  }
+  .btn-clear {
+    flex: 0.6;
+    color: var(--muted);
+  }
+
+  /* Header reset all button */
+  .reset-all {
+    display: inline-block;
+    margin-left: 12px;
+    font-size: 10px;
+    color: var(--muted);
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    text-decoration: underline;
+    text-decoration-color: var(--border);
+  }
+  .reset-all:hover { color: var(--accent2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="day-label" id="dayLabel">Loading...</div>
+  <div class="day-title" id="dayTitle">—</div>
+  <div class="time-now" id="timeNow">—</div>
+  <div class="day-switcher" id="daySwitcher"></div>
+  <span class="reset-link" id="resetLink">← Back to today</span>
+</header>
+
+<div id="content"></div>
+
+<!-- Edit Modal -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modalTitle">Edit Period</div>
+    <div class="modal-sub" id="modalSub">—</div>
+
+    <div class="input-group">
+      <label class="input-label">Class Title</label>
+      <input type="text" class="input-field" id="inputTitle" placeholder="e.g. XII Arts (or leave empty for free)">
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">Note / Subtitle</label>
+      <input type="text" class="input-field" id="inputSub" placeholder="e.g. Senior → Art Room">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-clear" id="btnClear">Clear</button>
+      <button class="btn" id="btnCancel">Cancel</button>
+      <button class="btn btn-primary" id="btnSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS = {
+  1: 'Monday',   2: 'Tuesday',  3: 'Wednesday',
+  4: 'Thursday', 5: 'Friday',   6: 'Saturday'
+};
+
+const PERIOD_TIMES = {
+  P0:    [7,  20, 8,  55],
+  P1:    [9,  5,  null, null],
+  P2:    [null,null,null,null],
+  P3:    [null,null,null,null],
+  P4:    [null,null,null,null],
+  P5:    [null,null,null,null],
+  P6:    [null,null,null,null],
+  P7:    [13, 0,  13, 30],
+  DIARY: [13, 30, 13, 45],
+};
+
+const SCHEDULE = {
+  1: { // Monday D1
+    P0: null,
+    P1: null,
+    P2: null,
+    P3: { title: 'XII Arts (Rem.)', sub: 'Senior → Art Room' },
+    P4: null,
+    P5: { title: 'XI (Sci + Arts + Comm)', sub: 'Senior → Art Room' },
+    P6: null,
+    P7: { title: 'XII (Sci + Comm + Arts)', sub: 'Senior → Art Room' },
+    DIARY: { title: 'Diary', sub: 'End of day' },
+  },
+  2: { // Tuesday D2
+    P0: null,
+    P1: null,
+    P2: { title: 'IXC', sub: 'Junior → Their Class' },
+    P3: { title: 'XII Arts (Rem.)', sub: 'Senior → Art Room' },
+    P4: null,
+    P5: { title: 'XI (Sci + Arts + Comm)', sub: 'Senior → Art Room' },
+    P6: null,
+    P7: { title: 'XII (Sci + Comm + Arts)', sub: 'Senior → Art Room' },
+    DIARY: { title: 'Diary', sub: 'End of day' },
+  },
+  3: { // Wednesday D3
+    P0: { title: 'XA', sub: 'Junior → Their Class' },
+    P1: null,
+    P2: null,
+    P3: { title: 'XII Arts (Rem.)', sub: 'Senior → Art Room' },
+    P4: { title: 'XII (Comm + Arts) Rem.', sub: 'Senior → Art Room' },
+    P5: null,
+    P6: null,
+    P7: { title: 'XII (Sci + Comm + Arts)', sub: 'Senior → Art Room' },
+    DIARY: { title: 'Diary', sub: 'End of day' },
+  },
+  4: { // Thursday D4
+    P0: { title: 'XC', sub: 'Junior → Their Class' },
+    P1: null,
+    P2: null,
+    P3: { title: 'XII Arts (Rem.)', sub: 'Senior → Art Room' },
+    P4: { title: 'XII (Comm + Arts) Rem.', sub: 'Senior → Art Room' },
+    P5: null,
+    P6: { title: 'PT (Sub)', sub: 'Substitute Duty — Provisional' },
+    P7: { title: 'XII (Sci + Comm + Arts)', sub: 'Senior → Art Room' },
+    DIARY: { title: 'Diary', sub: 'End of day' },
+  },
+  5: { // Friday D5
+    P0: { title: 'XB', sub: 'Junior → Their Class' },
+    P1: null,
+    P2: null,
+    P3: { title: 'XII Arts (Rem.)', sub: 'Senior → Art Room' },
+    P4: null,
+    P5: { title: 'IXA', sub: 'Junior → Their Class' },
+    P6: { title: 'XII (Sci + Comm + Arts)', sub: 'Senior → Art Room' },
+    P7: { title: 'XII (Sci + Comm + Arts)', sub: 'Senior → Art Room' },
+    DIARY: { title: 'Diary', sub: 'End of day' },
+  },
+  6: { // Saturday D6
+    P0: null,
+    P1: { title: 'IXB', sub: 'Junior → Their Class' },
+    P2: null,
+    P3: { title: 'XII Arts (Rem.)', sub: 'Senior → Art Room' },
+    P4: null,
+    P5: null,
+    P6: { title: 'XII (Sci + Comm + Arts)', sub: 'Senior → Art Room' },
+    P7: { title: 'XII (Sci + Comm + Arts)', sub: 'Senior → Art Room' },
+    DIARY: { title: 'Diary', sub: 'End of day' },
+  },
+};
+
+const PERIOD_ORDER = ['P0','P1','P2','P3','P4','P5','P6','P7','DIARY'];
+const PERIOD_LABELS = {
+  P0:'Period 0', P1:'Period 1', P2:'Period 2', P3:'Period 3',
+  P4:'Period 4', P5:'Period 5', P6:'Period 6', P7:'Period 7', DIARY:'Diary'
+};
+
+// ─── EDIT OVERRIDE SYSTEM ─────────────────────────────────────────────
+const STORAGE_KEY = 'kanav_tt_overrides_v1';
+
+function loadOverrides() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  } catch { return {}; }
+}
+
+function saveOverrides(o) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(o));
+}
+
+function getMergedSchedule() {
+  const overrides = loadOverrides();
+  const merged = JSON.parse(JSON.stringify(SCHEDULE));
+  for (const day in overrides) {
+    for (const period in overrides[day]) {
+      merged[day][period] = overrides[day][period];
+    }
+  }
+  return merged;
+}
+
+function setOverride(day, period, value) {
+  const o = loadOverrides();
+  if (!o[day]) o[day] = {};
+  o[day][period] = value;
+  saveOverrides(o);
+}
+
+function clearAllOverrides() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+let editingDay = null;
+let editingPeriod = null;
+
+function openEditor(day, period) {
+  editingDay = day;
+  editingPeriod = period;
+  const merged = getMergedSchedule();
+  const current = merged[day][period];
+
+  document.getElementById('modalTitle').textContent = `Edit ${PERIOD_LABELS[period]}`;
+  document.getElementById('modalSub').textContent = `Day ${day} · ${DAYS[day]}`;
+  document.getElementById('inputTitle').value = current ? current.title : '';
+  document.getElementById('inputSub').value = current ? current.sub : '';
+
+  document.getElementById('modalBackdrop').classList.add('show');
+}
+
+function closeEditor() {
+  document.getElementById('modalBackdrop').classList.remove('show');
+  editingDay = null;
+  editingPeriod = null;
+}
+
+document.getElementById('modalBackdrop').addEventListener('click', closeEditor);
+document.getElementById('btnCancel').addEventListener('click', closeEditor);
+
+document.getElementById('btnSave').addEventListener('click', () => {
+  if (editingDay === null || editingPeriod === null) return;
+  const title = document.getElementById('inputTitle').value.trim();
+  const sub = document.getElementById('inputSub').value.trim();
+  if (!title) {
+    setOverride(editingDay, editingPeriod, null);
+  } else {
+    setOverride(editingDay, editingPeriod, { title, sub });
+  }
+  closeEditor();
+  render();
+});
+
+document.getElementById('btnClear').addEventListener('click', () => {
+  if (editingDay === null || editingPeriod === null) return;
+  const o = loadOverrides();
+  if (o[editingDay]) {
+    delete o[editingDay][editingPeriod];
+    if (Object.keys(o[editingDay]).length === 0) delete o[editingDay];
+    saveOverrides(o);
+  }
+  closeEditor();
+  render();
+});
+
+function toMins(h, m) { return h * 60 + m; }
+function fmtTime(h, m) {
+  if (h === null) return '—:——';
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const hh = h > 12 ? h - 12 : h === 0 ? 12 : h;
+  return `${hh}:${String(m).padStart(2,'0')} ${suffix}`;
+}
+function nowMins() {
+  const n = new Date();
+  return toMins(n.getHours(), n.getMinutes());
+}
+
+function getPeriodStatus(pKey) {
+  const t = PERIOD_TIMES[pKey];
+  if (!t || t[0] === null) return 'unknown';
+  const start = toMins(t[0], t[1]);
+  const end = toMins(t[2], t[3]);
+  const now = nowMins();
+  if (now < start) return 'upcoming';
+  if (now >= end) return 'done';
+  return 'current';
+}
+
+function getProgress(pKey) {
+  const t = PERIOD_TIMES[pKey];
+  if (!t || t[0] === null) return 0;
+  const start = toMins(t[0], t[1]);
+  const end = toMins(t[2], t[3]);
+  const now = nowMins();
+  return Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
+}
+
+let viewingDay = null; // null = auto (today), or 1-6 to override
+
+function renderDaySwitcher(realDayNum) {
+  const switcher = document.getElementById('daySwitcher');
+  const days = [
+    {n: 1, label: 'Mon'},
+    {n: 2, label: 'Tue'},
+    {n: 3, label: 'Wed'},
+    {n: 4, label: 'Thu'},
+    {n: 5, label: 'Fri'},
+    {n: 6, label: 'Sat'},
+  ];
+  switcher.innerHTML = days.map(d => {
+    const classes = ['day-pill'];
+    const showingDay = viewingDay || realDayNum;
+    if (d.n === realDayNum) classes.push('today');
+    if (d.n === showingDay) classes.push('active');
+    return `<button class="${classes.join(' ')}" data-day="${d.n}">D${d.n} · ${d.label}</button>`;
+  }).join('');
+
+  switcher.querySelectorAll('.day-pill').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const day = parseInt(btn.dataset.day);
+      viewingDay = (day === realDayNum) ? null : day;
+      render();
+    });
+  });
+
+  const resetLink = document.getElementById('resetLink');
+  if (viewingDay && viewingDay !== realDayNum) {
+    resetLink.classList.add('show');
+  } else {
+    resetLink.classList.remove('show');
+  }
+}
+
+document.getElementById('resetLink').addEventListener('click', (e) => {
+  e.stopPropagation();
+  viewingDay = null;
+  render();
+});
+
+function render() {
+  const now = new Date();
+  const jsDay = now.getDay();
+  const realDayNum = jsDay === 0 ? null : jsDay;
+  const dayNum = viewingDay || realDayNum;
+
+  const timeStr = now.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit',hour12:true});
+  document.getElementById('timeNow').textContent = timeStr;
+
+  // No day at all (Sunday with no override)
+  if (!dayNum) {
+    document.getElementById('dayLabel').textContent = 'Day Off';
+    document.getElementById('dayTitle').textContent = 'Sunday';
+    document.getElementById('daySwitcher').innerHTML = '';
+    [1,2,3,4,5,6].forEach(n => {});
+    renderDaySwitcher(realDayNum);
+    document.getElementById('content').innerHTML = `
+      <div class="no-school">
+        <div class="no-school-icon">☀️</div>
+        <div class="no-school-text">No School Today</div>
+        <div class="no-school-sub">Tap a day above to preview</div>
+      </div>`;
+    return;
+  }
+
+  const isViewing = viewingDay && viewingDay !== realDayNum;
+  document.getElementById('dayLabel').textContent = isViewing
+    ? `Previewing · Day ${dayNum}`
+    : `Day ${dayNum} · SD Public School`;
+  document.getElementById('dayTitle').textContent = DAYS[dayNum];
+
+  renderDaySwitcher(realDayNum);
+
+  const daySchedule = getMergedSchedule()[dayNum];
+  let html = '<div class="timeline">';
+
+  PERIOD_ORDER.forEach((pKey) => {
+    const classData = daySchedule[pKey];
+    const times = PERIOD_TIMES[pKey];
+    // Only compute live status if viewing today
+    const status = isViewing ? 'upcoming' : getPeriodStatus(pKey);
+    const startStr = times && times[0] !== null ? fmtTime(times[0], times[1]) : '—';
+    const isDiary = pKey === 'DIARY';
+
+    if (pKey === 'P1') {
+      html += `<div class="break-row">
+        <div class="break-time-col"></div>
+        <div class="break-line-col"><div class="vline"></div></div>
+        <div class="break-content">── 10 min break ──</div>
+      </div>`;
+    }
+
+    const rowClass = `row-${status}${isDiary ? ' diary-row' : ''}`;
+    const nowBadge = status === 'current' ? '<span class="now-badge">NOW</span>' : '';
+
+    let cardInner = '';
+    const editBtn = `<button class="edit-icon" data-day="${dayNum}" data-period="${pKey}" title="Edit">✎</button>`;
+    if (classData) {
+      cardInner = `
+        ${editBtn}
+        <div class="period-tag">${PERIOD_LABELS[pKey]}</div>
+        <div class="card-title">${classData.title}${nowBadge}</div>
+        <div class="card-sub">${classData.sub}</div>
+        ${status === 'current' ? `<div class="progress-bar"><div class="progress-fill" style="width:${getProgress(pKey)}%"></div></div>` : ''}
+      `;
+    } else {
+      cardInner = `
+        ${editBtn}
+        <div class="period-tag">${PERIOD_LABELS[pKey]}</div>
+        <div class="card-title" style="color:var(--muted)">Free Period${nowBadge}</div>
+        ${status === 'current' ? `<div class="progress-bar"><div class="progress-fill" style="width:${getProgress(pKey)}%"></div></div>` : ''}
+      `;
+    }
+
+    html += `
+      <div class="period-row ${rowClass}">
+        <div class="time-col"><span class="time-start">${startStr}</span></div>
+        <div class="line-col"><div class="vline"></div><div class="dot"></div></div>
+        <div class="card-col"><div class="card">${cardInner}</div></div>
+      </div>`;
+  });
+
+  html += '</div>';
+  const hasOverrides = Object.keys(loadOverrides()).length > 0;
+  html += `<div class="footer">
+    Tap ✎ to edit any period · School ends 1:45 PM
+    ${hasOverrides ? '<br><span class="reset-all" id="resetAllBtn">Reset all edits</span>' : ''}
+  </div>`;
+  document.getElementById('content').innerHTML = html;
+
+  // Wire edit buttons
+  document.querySelectorAll('.edit-icon').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEditor(parseInt(btn.dataset.day), btn.dataset.period);
+    });
+  });
+
+  // Wire reset-all
+  const resetAllBtn = document.getElementById('resetAllBtn');
+  if (resetAllBtn) {
+    resetAllBtn.addEventListener('click', () => {
+      if (confirm('Reset all your edits and restore the original timetable?')) {
+        clearAllOverrides();
+        render();
+      }
+    });
+  }
+}
+
+render();
+setInterval(render, 60000);
+
+// Register service worker for offline support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed:', err));
+  });
+}
+</script>
+</body>
+</html>
